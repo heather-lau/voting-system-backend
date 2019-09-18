@@ -8,8 +8,20 @@ class BaseError extends Error {
   }
 }
 
+class ResourceNotFoundError extends BaseError {
+  constructor(message = 'Resource not found') {
+    super(message, 404, 'RESOURCE_NOT_FOUND')
+  }
+}
+
 class BadRequestError extends BaseError {
   constructor(message = 'Bad Request.') {
     super(message, 400, 'BAD_REQUEST')
   }
+}
+
+export {
+  BaseError,
+  ResourceNotFoundError,
+  BadRequestError
 }

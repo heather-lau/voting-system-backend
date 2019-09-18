@@ -34,7 +34,8 @@ app.use(bodyParser.json())
 app.use('/', router)
 
 app.use((req, res, next) => {
-  next(new ResourceNotFoundError)
+  console.log('hi')
+  next(new ResourceNotFoundError())
 })
 
 app.use((err, req, res, next) => {
@@ -47,5 +48,5 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(CONFIG.port, CONFIG.host, () => {
-  console.log(`Sever running at ${CONFIG.port}:${CONFIG.host}`)
+  console.log(`Sever running at ${CONFIG.host}:${CONFIG.port}`)
 })

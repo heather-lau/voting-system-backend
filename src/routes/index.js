@@ -1,9 +1,18 @@
 import express from 'express'
 
+import user_controller from '../controllers/users'
+
 const router = express.Router()
 
+router.all('*', (req, res, next) => {
+  res.formatSend = (payload, status=200) => {
+    return res.status(status).send({ payload })
+  }
+  return next()
+})
+
 // User routes
-// router.post('/signup', )
+router.post('/signup', user_controller.signup )
 // router.post('/signin', )
 
 // Campaign routes
