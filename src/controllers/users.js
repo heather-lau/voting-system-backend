@@ -11,5 +11,12 @@ export default {
     }
     const createdUser = await User.create(req.body)
     res.formatSend({ result: 'ok' })
+  }),
+
+  signin: asyncHandler(async (req, res, next) => {
+    if ( !email || !password ) {
+      return next(new BadRequestError('Name, Password are required'))
+    }
+    res.formatSend({ result: 'ok' })
   })
 }
