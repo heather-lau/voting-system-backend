@@ -9,17 +9,37 @@ const UserSchema = new Schema({
   },
   hkid: {
     type: String,
-    unique: [true, 'This field must be unique'],
-    required: [true, 'This field is required']
+    unique: true,
+    required: [true, 'This field is required'],
+    validate: {
+      validator: (v) => {
+        return /^([A-Z]{1,2})([0-9]{6})([A0-9])$/.test(v)
+      },
+      message: 'Please enter a vaild HKID'
+    }
   },
   email: {
     type: String,
     trim: true,
-    unique: [true, 'This field must be unique'],
+    unique: true,
+    required: [true, 'This field is required'],
+    validate: {
+      validator: (v) => {
+        return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(v)
+      },
+      message: 'Please enter a vaild email'
+    }
   },
   password: {
     type: String,
-    trim: true
+    trim: true,
+    retuired: [true, 'This field is required'],
+    validate: {
+      validator: (v) => {
+        return v && v.length >= 6
+      },
+      message: 'This field must be at least 6 characters'
+    }
   },
   createdAt: {
     type: Date,

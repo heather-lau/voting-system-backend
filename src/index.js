@@ -34,7 +34,6 @@ app.use(bodyParser.json())
 app.use('/', router)
 
 app.use((req, res, next) => {
-  console.log('hi')
   next(new ResourceNotFoundError())
 })
 
