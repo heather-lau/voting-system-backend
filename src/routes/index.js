@@ -17,10 +17,10 @@ router.post('/signup', user_controller.signup)
 // router.post('/signin', )
 
 // Campaign routes
-// router.get('/campaign', )
+router.get('/campaign', campaign_controller.list)
 router.post('/campaign', campaign_controller.create)
-// router.get('/campaign/:id', )
-// router.put('/campaign/:id', )
+router.get('/campaign/:id', campaign_controller.details)
+router.put('/campaign/:id', campaign_controller.update)
 // router.delete('/campaign/:id', )
 // router.post('/campaign/:id/vote', )
 
