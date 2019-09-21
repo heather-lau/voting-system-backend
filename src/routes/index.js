@@ -1,6 +1,7 @@
 import express from 'express'
 
 import user_controller from '../controllers/users'
+import campaign_controller from '../controllers/campaigns'
 
 const router = express.Router()
 
@@ -12,12 +13,12 @@ router.all('*', (req, res, next) => {
 })
 
 // User routes
-router.post('/signup', user_controller.signup )
+router.post('/signup', user_controller.signup)
 // router.post('/signin', )
 
 // Campaign routes
 // router.get('/campaign', )
-// router.post('/campaign', )
+router.post('/campaign', campaign_controller.create)
 // router.get('/campaign/:id', )
 // router.put('/campaign/:id', )
 // router.delete('/campaign/:id', )
