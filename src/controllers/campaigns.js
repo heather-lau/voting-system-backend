@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler'
 import { Types as mongooseTypes } from 'mongoose'
 
 import Campaign from '../models/campaign'
-import Vote from '../models/vote'
+
 import { BadRequestError, ResourceNotFoundError } from '../error'
 
 export default {
