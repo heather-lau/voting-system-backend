@@ -21,7 +21,7 @@ router.get('/campaign', campaign_controller.list)
 router.post('/campaign', campaign_controller.create)
 router.get('/campaign/:id', campaign_controller.details)
 router.put('/campaign/:id', campaign_controller.update)
-// router.delete('/campaign/:id', )
+router.delete('/campaign/:id', campaign_controller.delete)
 // router.post('/campaign/:id/vote', )
 
 export default router

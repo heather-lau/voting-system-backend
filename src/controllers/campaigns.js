@@ -7,10 +7,24 @@ import { BadRequestError, ResourceNotFoundError } from '../error'
 
 export default {
   list: asyncHandler(async (req, res, next) => {
-    const campaignList = await Campaign
-      .find({})
+    
+    const startedCampaigns = await Campaign
+      .find({status: 'Started'})
+      .sort({date: -1})
       .populate('hostBy', 'name')
-    res.formatSend(campaignList)
+
+    const pendingCampaigns = await Campaign
+      .find({status: 'Pending'})
+      .sort({date: -1})
+      .populate('hostBy', 'name')
+    
+    const endedCampaigns = await Campaign
+      .find({status: 'Ended'})
+      .sort({date: -1})
+      .populate('hostBy', 'name')
+
+    const campaigns = startedCampaigns.concat(pendingCampaigns, endedCampaigns)
+    res.formatSend(campaigns)
   }),
 
   details: asyncHandler(async (req, res, next) => {
@@ -19,13 +33,18 @@ export default {
     // Validate object id 
     const isVaildId = mongooseTypes.ObjectId.isValid(id)
     if (!isVaildId) {
-      throw next(new ResourceNotFoundError())
+      return next(new ResourceNotFoundError())
     }
 
     // Find the campaign
     const campaignDetails = await Campaign
-      .findById(id)
+      .findOne({_id: id})
       .populate('hostBy', 'name')
+
+    if (!campaignDetails) {
+      return next(new ResourceNotFoundError())
+    }
+
     res.formatSend(campaignDetails)
   }),
 
@@ -68,12 +87,18 @@ export default {
       { name: voteOption }
     ))
 
-    const updatedCampaign = await Campaign.updateOne({ _id: req.params.id },{
+    // Check if Campaign exists
+    const campaignDetails = await Campaign.findOne({ _id: id })
+    if (!campaignDetails) {
+      return next(new ResourceNotFoundError())
+    }
+
+    const updatedCampaign = await Campaign.updateOne({ _id: id },{
       ...req.body, 
       voteOptions: voteOptionsObj
     })
 
-    res.formatSend(updatedCampaign, 201)
+    res.formatSend(updatedCampaign)
   }),
 
   // Handle delete a campaign by DELETE
@@ -86,5 +111,8 @@ export default {
       throw next(new ResourceNotFoundError())
     }
 
+    const deletedCampaign = await Campaign.softDeleteById(id)
+
+    res.formatSend({result: 'deleted'})
   })
 }

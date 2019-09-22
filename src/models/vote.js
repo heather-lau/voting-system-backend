@@ -11,12 +11,8 @@ const VoteSchema = new Schema({
   voteOptions: {
     type: mongoose.Types.ObjectId,
     ref: 'Campaign.voteOptions'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-})
+}, { timestamps: true })
 
 const Vote = mongoose.model('Vote', VoteSchema)
 

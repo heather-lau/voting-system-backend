@@ -40,12 +40,20 @@ const UserSchema = new Schema({
       },
       message: 'Password must be at least 6 characters.'
     }
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-})
+}, { timestamps: true })
+
+UserSchema.statics = {
+  async softDeleteById(id) {
+    try {
+      const doc = await User.findOne({ _id: id })
+      doc.$isDeleted(true)
+      return doc.$isDeleted()
+    } catch(err) {
+      throw err
+    }
+  }
+}
 
 const User = mongoose.model('User', UserSchema)
 
