@@ -1,8 +1,8 @@
 import express from 'express'
 
+import auth from '../middlewares/auth'
 import user_controller from '../controllers/users'
 import campaign_controller from '../controllers/campaigns'
-import vote_controller from '../controllers/votes'
 
 const router = express.Router()
 
@@ -15,15 +15,15 @@ router.all('*', (req, res, next) => {
 
 // User routes
 router.post('/signup', user_controller.signup)
-// router.post('/signin', )
+router.post('/signin', user_controller.signin)
 
 // Campaign routes
+router.use('/campaign', auth.requireLogin)
 router.get('/campaign', campaign_controller.list)
 router.post('/campaign', campaign_controller.create)
 router.get('/campaign/:id', campaign_controller.details)
 router.put('/campaign/:id', campaign_controller.update)
 router.delete('/campaign/:id', campaign_controller.delete)
-
-router.post('/vote', vote_controller.create)
+router.post('/campaign/:id/vote', campaign_controller.vote)
 
 export default router

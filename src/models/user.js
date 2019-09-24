@@ -1,4 +1,7 @@
 import mongoose from 'mongoose'
+import bcrpyt from 'bcrypt'
+
+import { AuthenticationError, BadRequestError } from '../error'
 
 const Schema = mongoose.Schema
 
@@ -44,16 +47,45 @@ const UserSchema = new Schema({
 }, { timestamps: true })
 
 UserSchema.statics = {
-  async softDeleteById(id) {
+  async authenticate(email, password) {
     try {
-      const doc = await User.findOne({ _id: id })
-      doc.$isDeleted(true)
-      return doc.$isDeleted()
+      // Find user from database
+      const user = await User.findOne({email})
+      if (!user) {
+        throw (new AuthenticationError('User not found'))
+      }
+
+      // Compare password
+      const authenticated = await bcrpyt.compare(password, user.password)
+      if (!authenticated) {
+        throw (new AuthenticationError('Invaild email or password'))
+      }
+
+      return user
     } catch(err) {
-      throw err
+      throw next(err)
     }
   }
 }
+
+UserSchema.pre('save', async function(next) {
+  try {
+    let salt = await bcrpyt.genSalt(10)
+    this.password = await bcrpyt.hash(this.password, salt)
+    const users = await this.constructor.find({}).select('hkid')
+    const hkids = users.map(user => user.hkid)
+    for (let hkid of hkids) {
+      const existingHkid = await bcrpyt.compare(this.hkid, hkid)
+      if (existingHkid) { 
+        throw (new BadRequestError('This HKID is already used.'))
+      }
+    }
+    this.hkid = await bcrpyt.hash(this.hkid, salt)
+    next()
+  } catch(err) {
+    return next(err)
+  }
+})
 
 const User = mongoose.model('User', UserSchema)
 

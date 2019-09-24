@@ -8,6 +8,10 @@ const VoteOptionSchema = new Schema({
   name: {
     type: String,
     required: [true, 'Option name is required.']
+  },
+  totalVotes: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -81,7 +85,9 @@ CampaignSchema.pre('updateOne', function(next) {
 })
 
 CampaignSchema.pre(['find', 'findOne'], function() {
-  this.where({isDeleted: { $ne: true }}).select(['-isDeleted', '-__v'])
+  this
+    .where({isDeleted: { $ne: true }})
+    .select(['-isDeleted', '-__v'])
 })
 
 const Campaign = mongoose.model('Campaign', CampaignSchema)

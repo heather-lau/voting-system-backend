@@ -8,9 +8,14 @@ const VoteSchema = new Schema({
     ref: 'User',
     required: [true, 'Voter is required.']
   },
-  voteOptions: {
+  voteOption: {
     type: mongoose.Types.ObjectId,
-    ref: 'Campaign.voteOptions'
+    ref: 'Campaign.voteOptions',
+    required: [true, 'Vote option is required.']
+  },
+  campaign: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Campaign'
   }
 }, { timestamps: true })
 

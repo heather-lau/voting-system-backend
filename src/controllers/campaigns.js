@@ -2,12 +2,13 @@ import asyncHandler from 'express-async-handler'
 import { Types as mongooseTypes } from 'mongoose'
 
 import Campaign from '../models/campaign'
+import Vote from '../models/vote'
 
 import { BadRequestError, ResourceNotFoundError } from '../error'
 
 export default {
+  // Display list of all campaigns
   list: asyncHandler(async (req, res, next) => {
-    
     const startedCampaigns = await Campaign
       .find({status: 'Started'})
       .sort({date: -1})
@@ -27,6 +28,7 @@ export default {
     res.formatSend(campaigns)
   }),
 
+  // Display details of a campaign
   details: asyncHandler(async (req, res, next) => {
     const { id } = req.params
 
@@ -48,17 +50,18 @@ export default {
     res.formatSend(campaignDetails)
   }),
 
+  // Handle create a campaign by POST
   create: asyncHandler(async (req, res, next) => {
     const { title, voteOptions, starts, ends } = req.body
     if (!title || !voteOptions || !starts || !ends) {
       return next(new BadRequestError(
-        'title, vote options, starts and ends is required'
+        'Title, vote options, starts and ends is required'
       ))
     }
-    let voteOptionsObj = voteOptions.map(voteOption => (
+    const voteOptionsObj = voteOptions.map(voteOption => (
       { name: voteOption }
     ))
-    let createdCampaign = await Campaign.create({
+    const createdCampaign = await Campaign.create({
       ...req.body, 
       voteOptions: voteOptionsObj
     })
@@ -66,6 +69,7 @@ export default {
     res.formatSend(createdCampaign, 201)
   }),
   
+  // Handle update a campaign by PUT
   update: asyncHandler(async (req, res, next) => {
     const { id } = req.params
 
@@ -83,7 +87,7 @@ export default {
       ))
     }
 
-    let voteOptionsObj = voteOptions.map(voteOption => (
+    const voteOptionsObj = voteOptions.map(voteOption => (
       { name: voteOption }
     ))
 
@@ -114,5 +118,36 @@ export default {
     const deletedCampaign = await Campaign.softDeleteById(id)
 
     res.formatSend({result: 'deleted'})
+  }),
+
+  // Handle campaign vote by POST
+  vote: asyncHandler(async (req, res, next) => {
+    const { id } = req.params
+    const userId = req.user.id
+
+    // Validate object id 
+    const isVaildId = mongooseTypes.ObjectId.isValid(id)
+    if (!isVaildId) {
+      throw next(new ResourceNotFoundError())
+    }
+
+    const { voteOption } = req.body
+    if (!voteOption) {
+      return next(new BadRequestError('Vote option is required'))
+    }
+
+    // Check if user already voted this campaign
+    const votedCampaign = await Vote.findOne({ voter: userId, campaign: id })
+    if (votedCampaign) {
+      return next(new BadRequestError('You can only vote once in each campaign'))
+    }
+
+    // Create vote
+    const createdVote = await Vote.create({voteOption, voter: userId, campaign: id})
+    
+    // Update number of voteOption
+
+
+    res.formatSend(createdVote, 201)
   })
 }
