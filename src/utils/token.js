@@ -6,14 +6,23 @@ import { AuthenticationError } from '../error';
 import User from '../models/user';
 
 export default {
-  // Sign JWT token
+  // Sign JWT access token
   createAccessToken: asyncHandler(async (user) => {
     const payload = {
       id: user._id,
       name: user.name
     }
-
     const options = { expiresIn: '3h' }
+    const token = await jwt.sign(payload, CONFIG.jwt_secret, options)
+    return token
+  }),
+
+  // Sign JWT refresh token
+  createRefreshToken: asyncHandler(async(user) => {
+    const payload = {
+      id: user._id
+    }
+    const options = { expiresIn: '7d' }
     const token = await jwt.sign(payload, CONFIG.jwt_secret, options)
     return token
   }),
@@ -24,6 +33,7 @@ export default {
     return payload
   }),
 
+  // Get user data
   getUserData: asyncHandler(async (id) => {
     const user = await User.findOne({ _id: id })
     
