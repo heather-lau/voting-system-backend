@@ -54,16 +54,14 @@ UserSchema.statics = {
       if (!user) {
         throw (new AuthenticationError('User not found'))
       }
-
       // Compare password
       const authenticated = await bcrpyt.compare(password, user.password)
       if (!authenticated) {
         throw (new AuthenticationError('Invaild email or password'))
       }
-
       return user
     } catch(err) {
-      throw next(err)
+      throw (err)
     }
   }
 }
