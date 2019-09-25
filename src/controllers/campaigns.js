@@ -142,16 +142,19 @@ export default {
       return next(new BadRequestError('You can only vote once in each campaign'))
     }
 
+    // Check if the campaign status is not Started
     const campaign = await Campaign.findOne({_id: id})
     if (campaign.status == 'Ended') {
       return next(new BadRequestError('This campaign has ended'))
+    } else if (campaign.status == 'Pending') {
+      return next(new BadRequestError('This campaign is not available for vote yet'))
     }
 
     // Create vote
     const createdVote = await Vote.create({voteOption, voter: userId, campaign: id})
-    
-    // Update number of voteOption
 
+    // Update number of votes
+    const updatedTotalVote = await Campaign.update({'voteOptions._id': voteOption}, {'$inc': {'voteOptions.$.totalVotes': 1}})
 
     res.formatSend(createdVote, 201)
   })
