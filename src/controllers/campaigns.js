@@ -57,7 +57,7 @@ export default {
       return next(new BadRequestError(
         'Title, vote options, starts and ends is required'
       ))
-    }
+    }    
     const voteOptionsObj = voteOptions.map(voteOption => (
       { name: voteOption }
     ))
@@ -140,6 +140,11 @@ export default {
     const votedCampaign = await Vote.findOne({ voter: userId, campaign: id })
     if (votedCampaign) {
       return next(new BadRequestError('You can only vote once in each campaign'))
+    }
+
+    const campaign = await Campaign.findOne({_id: id})
+    if (campaign.status == 'Ended') {
+      return next(new BadRequestError('This campaign has ended'))
     }
 
     // Create vote
