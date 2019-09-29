@@ -16,15 +16,15 @@ router.all('*', (req, res, next) => {
 // User routes
 router.post('/signup', user_controller.signup)
 router.post('/signin', user_controller.signin)
-router.get('/access', user_controller.access)
+router.get('/access', auth.requireLogin, user_controller.access)
 
 // Campaign routes
-router.use('/campaign', auth.requireLogin)
 router.get('/campaign', campaign_controller.list)
-router.post('/campaign', campaign_controller.create)
+router.post('/campaign', auth.requireLogin, campaign_controller.create)
+router.get('/campaign/user', auth.requireLogin, campaign_controller.listByUser)
 router.get('/campaign/:id', campaign_controller.details)
-router.put('/campaign/:id', campaign_controller.update)
-router.delete('/campaign/:id', campaign_controller.delete)
-router.post('/campaign/:id/vote', campaign_controller.vote)
+router.put('/campaign/:id', auth.requireLogin, campaign_controller.update)
+router.delete('/campaign/:id', auth.requireLogin, campaign_controller.delete)
+router.post('/campaign/:id/vote', auth.requireLogin, campaign_controller.vote)
 
 export default router

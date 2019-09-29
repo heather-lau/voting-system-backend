@@ -14,9 +14,16 @@ export default {
 
     const createdUser = await User.create(req.body)
 
+    // Create JWT access token and refresh token
+    const accessToken = await tokenHelper.createAccessToken(createdUser)
+    const expiredAt = await tokenHelper.getExpiry(accessToken)
+    const refreshToken = await tokenHelper.createRefreshToken(createdUser)
+
     res.formatSend({
       'result': 'created',
-      '_id': createdUser._id
+      accessToken,
+      refreshToken,
+      expiredAt
     }, 201)
   }),
 
@@ -77,5 +84,5 @@ export default {
       throw next(new AuthenticationError('Unable to get user info'))
     }
     res.formatSend({ name })
-  }),
+  })
 }

@@ -28,6 +28,28 @@ export default {
     res.formatSend(campaigns)
   }),
 
+  // Display list of all campaigns
+  listByUser: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
+    const startedCampaigns = await Campaign
+      .find({status: 'Started', hostBy: userId})
+      .sort({date: -1})
+      .populate('hostBy', 'name')
+
+    const pendingCampaigns = await Campaign
+      .find({status: 'Pending', hostBy: userId})
+      .sort({date: -1})
+      .populate('hostBy', 'name')
+    
+    const endedCampaigns = await Campaign
+      .find({status: 'Ended', hostBy: userId})
+      .sort({date: -1})
+      .populate('hostBy', 'name')
+
+    const campaigns = startedCampaigns.concat(pendingCampaigns, endedCampaigns)
+    res.formatSend(campaigns)
+  }),
+
   // Display details of a campaign
   details: asyncHandler(async (req, res, next) => {
     const { id } = req.params
