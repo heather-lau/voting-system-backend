@@ -10,5 +10,7 @@ export default {
   db_port : process.env.DB_PORT,
   db_name : process.env.DB_NAME,
 
-  jwt_secret: process.env.JWT_SECRET
+  cors_url :process.env.CORS_URL,
+
+  jwt_secret : process.env.JWT_SECRET
 }

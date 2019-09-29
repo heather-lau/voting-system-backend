@@ -2,6 +2,8 @@ import 'babel-polyfill'
 import express from 'express'
 import mongoose from 'mongoose'
 import bodyParser from 'body-parser'
+import helmet from 'helmet'
+import cors from 'cors'
 
 import CONFIG from './config/config'
 import router from './routes'
@@ -27,8 +29,26 @@ mongoose.connection.on('error', (err) => {
 })
 
 /*
+** CORS Option
+*/
+const whitelist = CONFIG.cors_url && CONFIG.cors_url.replace(/\s/g, '').split(/\s*,\s*/)
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new AuthenticationError('Not allowed by CORS'))
+    }
+  },
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders: ['Content-Type', 'Authorization']
+}
+
+/*
 ** Set up server
 */ 
+app.use(helmet())
+app.use(cors(corsOptions))
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 app.use('/', router)

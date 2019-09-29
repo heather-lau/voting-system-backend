@@ -16,6 +16,7 @@ router.all('*', (req, res, next) => {
 // User routes
 router.post('/signup', user_controller.signup)
 router.post('/signin', user_controller.signin)
+router.get('/access', user_controller.access)
 
 // Campaign routes
 router.use('/campaign', auth.requireLogin)

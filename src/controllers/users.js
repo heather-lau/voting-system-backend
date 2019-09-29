@@ -68,5 +68,14 @@ export default {
       refreshToken: newRefreshToken,
       expiredAt
     })
-  })
+  }),
+
+  // Return user info by validate access token
+  access: asyncHandler(async (req, res, next) => {
+    const { name } = req.user
+    if (!name) {
+      throw next(new AuthenticationError('Unable to get user info'))
+    }
+    res.formatSend({ name })
+  }),
 }
