@@ -34,6 +34,7 @@ export default {
     const campaigns = foundCampaigns.map(campaign => {
       let voteOptions = campaign.voteOptions
       let totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
+
       return {
         totalVotes,
         '_id': campaign._id,
@@ -123,8 +124,12 @@ export default {
       return next(new BadRequestError('You can only vote once in each campaign'))
     }
 
+    if (votedCampaign.status !== 'Started') {
+      return next(new BadRequestError('You are not able to vote now.'))
+    }
+
     // Create vote
-    const createdVote = await Vote.create({voteOption, voter: userId, campaign: id})
+    const createdVote = await Vote.create({ voteOption, voter: userId, campaign: id })
     
     // Update number of voteOption
     const updatedTotalVote = await Campaign.update(
