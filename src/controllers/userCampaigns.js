@@ -3,7 +3,7 @@ import { Types as mongooseTypes } from 'mongoose'
 
 import Campaign from '../models/campaign'
 import Vote from '../models/vote'
-import { BadRequestError, ResourceNotFoundError, ForbiddenError } from '../error'
+import { BadRequestError, ResourceNotFoundError } from '../error'
 
 export default {
   // Display list of all campaigns
@@ -11,8 +11,8 @@ export default {
     const { status } = req.query
     let filter = {}
     if (status) {
-      status.toLowerCase()
-      switch (status) {
+      const statusName = status.toLowerCase()
+      switch (statusName) {
         case 'started':
           filter.status = 'Started'
           break
@@ -30,7 +30,7 @@ export default {
 
     const foundCampaigns = await Campaign
       .find(filter)
-      .sort({date: -1})
+      .sort({ createdAt: -1 })
       .populate('hostBy', 'name')
 
     // Calculate sum of votes
@@ -84,7 +84,13 @@ export default {
       .populate('campaign')
 
     if (vote) {
-      userVoted = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
+      const votedOption = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
+      if (votedOption) {
+        userVoted = {
+          name: votedOption.name,
+          _id: votedOption._id
+        }
+      }
     }
 
     const payload = {
@@ -162,7 +168,7 @@ export default {
       voteOptions: voteOptionsObj
     })
 
-    res.formatSend({result: 'updated'})
+    res.formatSend({ result: 'updated' })
   }),
 
   // Handle delete a campaign by DELETE
@@ -184,6 +190,6 @@ export default {
 
     const deletedCampaign = await Campaign.softDeleteById(id)
 
-    res.formatSend({result: 'deleted'})
+    res.formatSend({ result: 'deleted' })
   })
 }

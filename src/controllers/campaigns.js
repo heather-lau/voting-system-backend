@@ -14,8 +14,8 @@ export default {
     const { status } = req.query
     filter.status = { "$in": ['Started', 'Ended'] }
     if (status) {
-      status.toLowerCase()
-      switch (status) {
+      const statusName = status.toLowerCase()
+      switch (statusName) {
         case 'started':
           filter.status = 'Started'
           break
@@ -27,7 +27,7 @@ export default {
 
     const foundCampaigns = await Campaign
       .find(filter)
-      .sort({date: -1})
+      .sort({ date: -1 })
       .populate('hostBy', 'name')
 
     // Calculate sum of votes
@@ -81,7 +81,13 @@ export default {
         .findOne({ voter: req.user.id, campaign: id })
         .populate('campaign')
       if (vote) {
-        userVoted = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
+        const votedOption = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
+        if (votedOption) {
+          userVoted = {
+            name: votedOption.name,
+            _id: votedOption._id
+          }
+        }
       }
     }
 
@@ -123,10 +129,9 @@ export default {
     if (votedCampaign) {
       return next(new BadRequestError('You can only vote once in each campaign'))
     }
-
-    if (votedCampaign.status !== 'Started') {
-      return next(new BadRequestError('You are not able to vote now.'))
-    }
+    // if (votedCampaign && votedCampaign.status !== 'Started') {
+    //   return next(new BadRequestError('You are not able to vote now.'))
+    // }
 
     // Create vote
     const createdVote = await Vote.create({ voteOption, voter: userId, campaign: id })
