@@ -3,14 +3,13 @@ import { Types as mongooseTypes } from 'mongoose'
 
 import Campaign from '../models/campaign'
 import Vote from '../models/vote'
-
 import { BadRequestError, ResourceNotFoundError, ForbiddenError } from '../error'
 
 export default {
   // Display list of all campaigns
   list: asyncHandler(async (req, res, next) => {
-    let filter = {}
     const { status } = req.query
+    let filter = {}
     if (status) {
       status.toLowerCase()
       switch (status) {
@@ -23,36 +22,11 @@ export default {
         case 'ended': 
           filter.status = 'Ended'
           break
-        default:
-          filter = {}
       }
     }
 
-    const foundCampaigns = await Campaign
-      .find(filter)
-      .sort({date: -1})
-      .populate('hostBy', 'name')
-
-    // Calculate sum of votes
-    const campaigns = foundCampaigns.map(campaign => {
-      let voteOptions = campaign.voteOptions
-      let totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
-      return {...campaign.toJSON(), totalVotes}
-    })
-
-    const { status } = req.query
-    filter.status = { "$in": ['Started', 'Ended'] }
-    if (status) {
-      status.toLowerCase()
-      switch (status) {
-        case 'started':
-          filter.status = 'Started'
-          break
-        case 'ended': 
-          filter.status = 'Ended'
-          break
-      }
-    }
+    const userId = req.user.id
+    filter.hostBy = userId
 
     const foundCampaigns = await Campaign
       .find(filter)
@@ -81,6 +55,7 @@ export default {
 
   // Display details of a campaign
   details: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
     const { id } = req.params
 
     // Validate object id 
@@ -91,7 +66,7 @@ export default {
 
     // Find the campaign
     const campaign = await Campaign
-      .findOne({ _id: id }) // stauts should be started or ended
+      .findOne({ _id: id, hostBy: userId })
       .populate('hostBy', 'name')
 
     if (!campaign) {
@@ -101,16 +76,15 @@ export default {
     // Sum up the total votes
     const voteOptions = await campaign.voteOptions
     const totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
-    
+
     // Find the user vote
     let userVoted = null
-    if (req.user) {
-      const vote = await Vote
-        .findOne({ voter: req.user.id, campaign: id })
-        .populate('campaign')
-      if (vote) {
-        userVoted = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
-      }
+    const vote = await Vote
+      .findOne({ voter: req.user.id, campaign: id })
+      .populate('campaign')
+
+    if (vote) {
+      userVoted = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
     }
 
     const payload = {
@@ -130,10 +104,34 @@ export default {
     res.formatSend(payload)
   }),
 
-  // Handle campaign vote by POST
-  vote: asyncHandler(async (req, res, next) => {
-    const { id } = req.params
+  // Handle create a campaign by POST
+  create: asyncHandler(async (req, res, next) => {
     const userId = req.user.id
+    const { title, voteOptions, starts, ends } = req.body
+
+    if (!title || !voteOptions || !starts || !ends) {
+      return next(new BadRequestError(
+        'Title, vote options, starts and ends is required'
+      ))
+    }
+
+    const voteOptionsObj = voteOptions.map(voteOption => (
+      { name: voteOption }
+    ))
+
+    const createdCampaign = await Campaign.create({
+      ...req.body, 
+      hostBy: userId,
+      voteOptions: voteOptionsObj
+    })
+
+    res.formatSend({ result: 'created', _id: createdCampaign._id }, 201)
+  }),
+  
+  // Handle update a campaign by PUT
+  update: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
+    const { id } = req.params
 
     // Validate object id 
     const isVaildId = mongooseTypes.ObjectId.isValid(id)
@@ -141,26 +139,51 @@ export default {
       throw next(new ResourceNotFoundError())
     }
 
-    const { voteOption } = req.body
-    if (!voteOption) {
-      return next(new BadRequestError('Vote option is required'))
+    // Check required fields
+    const { title, voteOptions, starts, ends } = req.body
+    if (!title || !voteOptions || !starts || !ends) {
+      return next(new BadRequestError(
+        'title, vote options, starts and ends is required'
+      ))
     }
 
-    // Check if user already voted this campaign
-    const votedCampaign = await Vote.findOne({ voter: userId, campaign: id })
-    if (votedCampaign) {
-      return next(new BadRequestError('You can only vote once in each campaign'))
+    const voteOptionsObj = voteOptions.map(voteOption => (
+      { name: voteOption }
+    ))
+
+    // Check if campaign exists
+    const campaignDetails = await Campaign.findOne({ _id: id, hostBy: userId })
+    if (!campaignDetails) {
+      return next(new ResourceNotFoundError())
     }
 
-    // Create vote
-    const createdVote = await Vote.create({voteOption, voter: userId, campaign: id})
-    
-    // Update number of voteOption
-    const updatedTotalVote = await Campaign.update(
-      { 'voteOptions._id': voteOption },
-      { '$inc': { 'voteOptions.$.totalVotes': 1 }}
-    )
+    const updatedCampaign = await Campaign.updateOne({ _id: id }, {
+      ...req.body, 
+      voteOptions: voteOptionsObj
+    })
 
-    res.formatSend({ result: 'created', _id: createdVote._id }, 201)
+    res.formatSend({result: 'updated'})
+  }),
+
+  // Handle delete a campaign by DELETE
+  delete: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
+    const { id } = req.params
+
+    // Validate object id 
+    const isVaildId = mongooseTypes.ObjectId.isValid(id)
+    if (!isVaildId) {
+      throw next(new ResourceNotFoundError())
+    }
+
+    // Check if campaign exists
+    const foundCampaign = await Campaign.findOne({ _id: id, hostBy: userId })
+    if (!foundCampaign) {
+      return next(new ResourceNotFoundError())
+    }
+
+    const deletedCampaign = await Campaign.softDeleteById(id)
+
+    res.formatSend({result: 'deleted'})
   })
 }
