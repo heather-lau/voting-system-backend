@@ -4,49 +4,81 @@ import { Types as mongooseTypes } from 'mongoose'
 import Campaign from '../models/campaign'
 import Vote from '../models/vote'
 
-import { BadRequestError, ResourceNotFoundError } from '../error'
+import { BadRequestError, ResourceNotFoundError, ForbiddenError } from '../error'
 
 export default {
   // Display list of all campaigns
   list: asyncHandler(async (req, res, next) => {
-    const startedCampaigns = await Campaign
-      .find({status: 'Started'})
+    let filter = {}
+    const { status } = req.query
+    if (status) {
+      status.toLowerCase()
+      switch (status) {
+        case 'started':
+          filter.status = 'Started'
+          break
+        case 'pending': 
+          filter.status = 'Pending'
+          break
+        case 'ended': 
+          filter.status = 'Ended'
+          break
+        default:
+          filter = {}
+      }
+    }
+
+    const foundCampaigns = await Campaign
+      .find(filter)
       .sort({date: -1})
       .populate('hostBy', 'name')
 
-    const pendingCampaigns = await Campaign
-      .find({status: 'Pending'})
-      .sort({date: -1})
-      .populate('hostBy', 'name')
-    
-    const endedCampaigns = await Campaign
-      .find({status: 'Ended'})
-      .sort({date: -1})
-      .populate('hostBy', 'name')
+    // Calculate sum of votes
+    const campaigns = foundCampaigns.map(campaign => {
+      let voteOptions = campaign.voteOptions
+      let totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
+      return {...campaign.toJSON(), totalVotes}
+    })
 
-    const campaigns = startedCampaigns.concat(pendingCampaigns, endedCampaigns)
     res.formatSend(campaigns)
   }),
 
   // Display list of all campaigns
   listByUser: asyncHandler(async (req, res, next) => {
     const userId = req.user.id
-    const startedCampaigns = await Campaign
-      .find({status: 'Started', hostBy: userId})
+    const { status } = req.query
+
+    let filter = {}
+    filter.hostBy = userId
+    if (status) {
+      status.toLowerCase()
+      switch (status) {
+        case 'started':
+          filter.status = 'Started'
+          break
+        case 'pending': 
+          filter.status = 'Pending'
+          break
+        case 'ended': 
+          filter.status = 'Ended'
+          break
+        default:
+          filter = {}
+      }
+    }
+
+    const foundCampaigns = await Campaign
+      .find(filter)
       .sort({date: -1})
       .populate('hostBy', 'name')
 
-    const pendingCampaigns = await Campaign
-      .find({status: 'Pending', hostBy: userId})
-      .sort({date: -1})
-      .populate('hostBy', 'name')
-    
-    const endedCampaigns = await Campaign
-      .find({status: 'Ended', hostBy: userId})
-      .sort({date: -1})
-      .populate('hostBy', 'name')
+    // Calculate sum of votes
+    const campaigns = foundCampaigns.map(campaign => {
+      let voteOptions = campaign.voteOptions
+      let totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
+      return { ...campaign.toJSON(), totalVotes }
+    })
 
-    const campaigns = startedCampaigns.concat(pendingCampaigns, endedCampaigns)
     res.formatSend(campaigns)
   }),
 
@@ -62,29 +94,52 @@ export default {
 
     // Find the campaign
     const campaignDetails = await Campaign
-      .findOne({_id: id})
+      .findOne({ _id: id })
       .populate('hostBy', 'name')
 
     if (!campaignDetails) {
       return next(new ResourceNotFoundError())
     }
 
-    res.formatSend(campaignDetails)
+    // Sum up the total votes
+    const voteOptions = await campaignDetails.voteOptions
+    const totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
+    const payload = { ...campaignDetails.toJSON(), totalVotes }
+
+    // Find the user vote
+    if (req.user) {
+      const vote = await Vote
+        .findOne({ voter: req.user.id, campaign: id })
+        .populate('campaign')
+      let userVoted = null
+      if (vote) {
+        const foundVote = await voteOptions.find(({ _id }) => vote.voteOption.equals(_id))
+        userVoted = { id: foundVote._id, name: foundVote.name }
+      }
+      payload.userVoted = userVoted
+    }
+
+    res.formatSend(payload)
   }),
 
   // Handle create a campaign by POST
   create: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
     const { title, voteOptions, starts, ends } = req.body
+
     if (!title || !voteOptions || !starts || !ends) {
       return next(new BadRequestError(
         'Title, vote options, starts and ends is required'
       ))
     }
+
     const voteOptionsObj = voteOptions.map(voteOption => (
       { name: voteOption }
     ))
+
     const createdCampaign = await Campaign.create({
       ...req.body, 
+      hostBy: userId,
       voteOptions: voteOptionsObj
     })
 
@@ -93,6 +148,7 @@ export default {
   
   // Handle update a campaign by PUT
   update: asyncHandler(async (req, res, next) => {
+    const userId = req.user.id
     const { id } = req.params
 
     // Validate object id 
@@ -113,10 +169,15 @@ export default {
       { name: voteOption }
     ))
 
-    // Check if Campaign exists
+    // Check if campaign exists
     const campaignDetails = await Campaign.findOne({ _id: id })
     if (!campaignDetails) {
       return next(new ResourceNotFoundError())
+    }
+
+    // Check if campaign is created by current user
+    if (campaignDetails.hostBy !== userId) {
+      return next(new ForbiddenError('This campaign is not host by you'))
     }
 
     const updatedCampaign = await Campaign.updateOne({ _id: id },{
@@ -168,7 +229,10 @@ export default {
     const createdVote = await Vote.create({voteOption, voter: userId, campaign: id})
     
     // Update number of voteOption
-
+    const updatedTotalVote = await Campaign.update(
+      { 'voteOptions._id': voteOption },
+      { '$inc': { 'voteOptions.$.totalVotes': 1 }}
+    )
 
     res.formatSend(createdVote, 201)
   })

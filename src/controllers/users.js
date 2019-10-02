@@ -14,6 +14,11 @@ export default {
 
     const createdUser = await User.create(req.body)
 
+    const userData = {
+      'name': createdUser.name,
+      'id': createdUser._id
+    }
+
     // Create JWT access token and refresh token
     const accessToken = await tokenHelper.createAccessToken(createdUser)
     const expiredAt = await tokenHelper.getExpiry(accessToken)
@@ -21,6 +26,7 @@ export default {
 
     res.formatSend({
       'result': 'created',
+      userData,
       accessToken,
       refreshToken,
       expiredAt
@@ -40,12 +46,18 @@ export default {
       return next(new BadRequestError('Invaild email or password'))
     }
 
+    const userData = {
+      'name': user.name,
+      'id': user._id
+    }
+
     // Create JWT access token and refresh token
     const accessToken = await tokenHelper.createAccessToken(user)
     const expiredAt = await tokenHelper.getExpiry(accessToken)
     const refreshToken = await tokenHelper.createRefreshToken(user)
 
     res.formatSend({
+      userData,
       accessToken,
       refreshToken,
       expiredAt
@@ -79,10 +91,10 @@ export default {
 
   // Return user info by validate access token
   access: asyncHandler(async (req, res, next) => {
-    const { name } = req.user
+    const { name, id } = req.user
     if (!name) {
       throw next(new AuthenticationError('Unable to get user info'))
     }
-    res.formatSend({ name })
+    res.formatSend({ name, id })
   })
 }

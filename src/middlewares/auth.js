@@ -12,7 +12,21 @@ export default {
     const accessToken = bearerHeader.slice(7)
     const verifiedUser = await tokenHelper.verifyAccessToken(accessToken)
     const userData = await tokenHelper.getUserData(verifiedUser.id)
+
     req.user = userData
+    return next()
+  }),
+
+  determineUserLogin: asyncHandler(async (req, res, next) => {
+    const bearerHeader = req.headers['authorization'] || req.headers['Authorization']
+    if (typeof bearerHeader !== 'undefined') {
+      const accessToken = bearerHeader.slice(7)
+      const verifiedUser = await tokenHelper.verifyAccessToken(accessToken)
+      const userData = await tokenHelper.getUserData(verifiedUser.id)
+      req.user = userData
+    } else {
+      req.user = null
+    }
     return next()
   })
 }
