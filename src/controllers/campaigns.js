@@ -10,35 +10,6 @@ export default {
   // Display list of all campaigns
   list: asyncHandler(async (req, res, next) => {
     let filter = {}
-    const { status } = req.query
-    if (status) {
-      status.toLowerCase()
-      switch (status) {
-        case 'started':
-          filter.status = 'Started'
-          break
-        case 'pending': 
-          filter.status = 'Pending'
-          break
-        case 'ended': 
-          filter.status = 'Ended'
-          break
-        default:
-          filter = {}
-      }
-    }
-
-    const foundCampaigns = await Campaign
-      .find(filter)
-      .sort({date: -1})
-      .populate('hostBy', 'name')
-
-    // Calculate sum of votes
-    const campaigns = foundCampaigns.map(campaign => {
-      let voteOptions = campaign.voteOptions
-      let totalVotes = voteOptions.reduce((sum, voteOption) => sum + voteOption.totalVotes, 0)
-      return {...campaign.toJSON(), totalVotes}
-    })
 
     const { status } = req.query
     filter.status = { "$in": ['Started', 'Ended'] }
