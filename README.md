@@ -21,6 +21,11 @@ Start the database:
 mongod
 ```
 
+Run seeder for development testing
+```
+npm run seed
+```
+
 Running the app:
 ```
 npm start
